@@ -1,0 +1,78 @@
+name: Terragrunt
+
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  push:
+    paths:
+      - "terragrunt/**/*.hcl"
+      - ".github/workflows/terragrunt-dev.yml"
+  pull_request:
+    paths:
+      - "terraform/**/*.tf"
+      - ".github/workflows/terraform.yml"
+
+env:
+  tf_version: 1.9.8
+  tg_version: 0.68.5
+  root_dir: terragrunt
+  working_dir: terragrunt/aws/us-west-1/dev
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Check terragrunt HCL
+        uses: gruntwork-io/terragrunt-action@v2
+        with:
+          tf_version: ${{ env.tf_version }}
+          tg_version: ${{ env.tg_version }}
+          tg_dir: ${{ env.root_dir }}
+          tg_command: 'hclfmt --terragrunt-check --terragrunt-diff'
+  plan:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-west-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Plan
+        uses: gruntwork-io/terragrunt-action@v2
+        with:
+          tf_version: ${{ env.tf_version }}
+          tg_version: ${{ env.tg_version }}
+          tg_dir: ${{ env.working_dir }}
+          tg_command: 'run-all plan'
+        env:
+          INPUT_PRE_EXEC_0: git config --global url."https://oauth2:${{ github.token }}@github.com/".insteadOf "https://github.com/"
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: [ plan ]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-west-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Apply
+        uses: gruntwork-io/terragrunt-action@v2
+        with:
+          tf_version: ${{ env.tf_version }}
+          tg_version: ${{ env.tg_version }}
+          tg_dir: ${{ env.working_dir }}
+          tg_command: 'run-all apply'
+        env:
+          INPUT_PRE_EXEC_0: git config --global url."https://oauth2:${{ github.token }}@github.com/".insteadOf "https://github.com/"
