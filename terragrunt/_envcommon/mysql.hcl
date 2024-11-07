@@ -1,7 +1,7 @@
 locals {
   environment_vars = read_terragrunt_config(find_in_parent_folders("env.hcl"))
   env = local.environment_vars.locals.environment
-  base_source_url = "git::git@github.com:gruntwork-io/terragrunt-infrastructure-modules-example.git//modules/mysql"
+  base_source_url = "github.com:gruntwork-io/terragrunt-infrastructure-modules-example/modules/mysql"
 }
 
 inputs = {
