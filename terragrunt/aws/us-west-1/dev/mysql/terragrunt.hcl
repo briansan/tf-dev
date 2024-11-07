@@ -8,5 +8,5 @@ include "envcommon" {
 }
 
 terraform {
-  source = "${include.envcommon.locals.base_source_url}?ref=v0.8.0"
+  source = "${include.envcommon.locals.base_source_url}"
 }
